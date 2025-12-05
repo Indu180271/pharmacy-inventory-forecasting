@@ -1,0 +1,53 @@
+groups:
+  - name: pipeline_alerts
+    rules:
+
+      # ----------------------------------------------------------
+      # PIPELINE FAILED ALERT
+      # ----------------------------------------------------------
+      - alert: PipelineFailed
+        expr: pipeline_failures_total > 0
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pipeline failure detected"
+          description: "The unified orchestrate_pipeline.py has failed at least once."
+
+      # ----------------------------------------------------------
+      # TRAINING FAILED ALERT
+      # ----------------------------------------------------------
+      - alert: TrainingFailed
+        expr: training_failure_total > 0
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Training job failure"
+          description: "train_xgb_updated.py encountered a failure."
+
+      # ----------------------------------------------------------
+      # DATA DRIFT ALERT
+      # ----------------------------------------------------------
+      - alert: DataDriftDetected
+        expr: drift_detected_total > 0
+        for: 5s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Data drift detected"
+          description: "Evidently detected input data drift."
+
+      # ----------------------------------------------------------
+      # OPTIONAL: PIPELINE SUCCESS RATIO ALERT
+      # ----------------------------------------------------------
+      # Marks pipeline unhealthy if failures > 20% of total runs
+      - alert: PipelineHighFailureRate
+        expr: (pipeline_failures_total / pipeline_runs_total) > 0.2
+        for: 10s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pipeline failure rate > 20%"
+          description: "More than 20% of pipeline runs are failing."
+

@@ -1,0 +1,39 @@
+{
+  "id": null,
+  "title": "Pipeline Basic Monitoring",
+  "schemaVersion": 16,
+  "version": 1,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Pipeline Success",
+      "targets": [{ "expr": "pipeline_success_total" }],
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Pipeline Failures",
+      "targets": [{ "expr": "pipeline_failure_total" }],
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 3 }
+    },
+    {
+      "type": "graph",
+      "title": "Pipeline Step Duration",
+      "targets": [{ "expr": "pipeline_step_duration_seconds" }],
+      "gridPos": { "x": 0, "y": 3, "w": 12, "h": 6 }
+    },
+    {
+      "type": "stat",
+      "title": "Training Success",
+      "targets": [{ "expr": "training_success_total" }],
+      "gridPos": { "x": 0, "y": 9, "w": 6, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Training Failures",
+      "targets": [{ "expr": "training_failure_total" }],
+      "gridPos": { "x": 6, "y": 9, "w": 6, "h": 3 }
+    }
+  ]
+}
+

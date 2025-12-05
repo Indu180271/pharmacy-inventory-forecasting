@@ -1,0 +1,324 @@
+
+services:
+
+  ###############################################################
+  # PostgreSQL (Marquez DB)
+  ###############################################################
+  marquez-db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: marquez
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+    ports:
+      - "5434:5432"
+    volumes:
+      - marquez_db_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+    
+
+  ###############################################################
+  # Marquez Backend
+  ###############################################################
+  marquez:
+    image: marquezproject/marquez:latest
+    environment:
+      MARQUEZ_CONFIG: /etc/marquez/config.yml
+      MARQUEZ_DB_HOST: marquez-db
+      MARQUEZ_DB_PORT: 5432
+      MARQUEZ_DB: marquez
+      MARQUEZ_DB_USER: marquez
+      MARQUEZ_DB_PASSWORD: marquez
+    volumes:
+      - ./config.yml:/etc/marquez/config.yml
+    depends_on:
+      - marquez-db
+    ports:
+      - "5000:8080"
+    networks:
+      - app-net
+   
+
+  ###############################################################
+  # Marquez UI
+  ###############################################################
+  marquez-web:
+    image: marquezproject/marquez-web:latest
+    depends_on:
+      - marquez
+    ports:
+      - "3000:3000"
+    environment:
+      MARQUEZ_HOST: marquez
+      MARQUEZ_PORT: 8080
+      WEB_PORT: 3000
+    networks:
+      - app-net
+   
+
+  ###############################################################
+  # ClickHouse
+  ###############################################################
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    environment:
+      CLICKHOUSE_DB: raw_zone
+      CLICKHOUSE_USER: clickuser
+      CLICKHOUSE_PASSWORD: clickpass
+    ports:
+      - "8123:8123"   # HTTP – required
+      - "9000:9000"   # native client
+      - "9363:9363"   # Prometheus metrics
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    networks:
+      - app-net
+     
+
+    
+
+
+  ###############################################################
+  # MLflow Server
+  ###############################################################
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: mlflow
+    environment:
+      MLFLOW_BACKEND_STORE_URI: sqlite:////mlflow/mlflow.db
+      MLFLOW_ARTIFACT_ROOT: /mlflow/artifacts
+    volumes:
+      - ./mlflow:/mlflow
+    ports:
+      - "5002:5002"
+    command: >
+      mlflow server
+        --backend-store-uri sqlite:////mlflow/mlflow.db
+        --default-artifact-root /mlflow/artifacts
+        --host 0.0.0.0
+        --port 5002
+        --serve-artifacts
+        --allowed-hosts="*"
+        --cors-allowed-origins="*"
+    networks:
+      - app-net
+
+
+  ###############################################################
+  # FULL PIPELINE ORCHESTRATOR (Ingest → Validate → Clean)
+  ###############################################################
+  pipeline:
+    build:
+      context: .
+      dockerfile: ./validator/Dockerfile
+    container_name: full_pipeline
+    user: "${UID:-1000}:${GID:-1000}"
+
+    volumes:
+      - ./:/app
+      - ./validator/data:/app/data
+      - ./clean_output:/app/clean_output
+      - ./validator/gx:/app/gx 
+      - ./mpl:/app/.mpl
+
+    environment:
+      GE_HOME: /app/gx
+      GX_CONTEXT_ROOT: /app/gx
+      MPLCONFIGDIR: /app/.mpl
+
+      OPENLINEAGE_URL: http://marquez:8080
+      OPENLINEAGE_NAMESPACE: inventory_pipeline
+
+      PG_HOST: host-gateway
+      PG_PORT: 5432
+      PG_DB: ml_opps
+      PG_USER: postgres
+      PG_PASSWORD: 1234
+
+      TS_HOST: host-gateway
+      TS_PORT: 5432
+      TS_DB: ml_opps
+      TS_USER: postgres
+      TS_PASSWORD: 1234
+
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 9000
+      CLICKHOUSE_DB: raw_zone
+      CLICKHOUSE_USER: clickuser
+      CLICKHOUSE_PASSWORD: clickpass
+
+      RAW_DB: raw_zone
+      CLEAN_DB: clean_zone
+
+    ports:
+      - "8000:8000"
+
+    extra_hosts:
+      - "host-gateway:host-gateway"
+
+    depends_on:
+      - clickhouse
+      - marquez
+      - mlflow
+
+    command: ["sh", "-c", "python orchestrate_pipeline.py && tail -f /dev/null"]
+    networks:
+      - app-net
+
+
+  ###############################################################
+  # XGBoost Training
+  ###############################################################
+  train-xgb:
+    build:
+      context: .
+      dockerfile: src/training/Dockerfile
+    container_name: train_xgb
+
+    environment:
+      PYTHONPATH: "/app"
+      MLFLOW_TRACKING_URI: http://mlflow:5002
+
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 9000
+      CLICKHOUSE_USER: clickuser
+      CLICKHOUSE_PASSWORD: clickpass
+      CLICKHOUSE_DATABASE: feature_store
+
+      MODELS_PATH: /app/models
+
+    depends_on:
+      - pipeline
+      - clickhouse
+      - mlflow
+
+    volumes:
+      - ./:/app
+      - ./models:/app/models
+      - ./mlflow:/mlflow
+
+    ports:
+      - "8001:8000"
+
+    command: ["sh", "-c", "python src/training/train_xgb.py && tail -f /dev/null"]
+    networks:
+      - app-net	
+
+
+  ###############################################################
+  # Model Serving API (FastAPI)
+  ###############################################################
+  model-api:
+    build:
+      context: .
+      dockerfile: ./src/api/Dockerfile
+    container_name: model_api
+
+    environment:
+      PYTHONPATH: "/app"
+      MODELS_PATH: /app/models
+      MLFLOW_TRACKING_URI: http://mlflow:5002
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_USER: clickuser
+      CLICKHOUSE_PASSWORD: clickpass
+      CLICKHOUSE_DATABASE: feature_store
+
+    ports:
+      - "8002:8000"
+ 
+    volumes:
+      - ./src:/app/src
+      - ./models:/app/models
+      - ./results:/app/results
+
+
+    depends_on:
+      - train-xgb
+      - clickhouse
+      - mlflow
+    networks:
+      - app-net
+
+
+  ###############################################################
+  # Prometheus
+  ###############################################################
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus_rules.yml:/etc/prometheus/prometheus_rules.yml
+    
+    ports:
+      - "9090:9090"
+    depends_on:
+      - pipeline
+      - train-xgb
+    networks:
+      - app-net
+
+
+
+  ###############################################################
+  # Alertmanager
+  ###############################################################
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"
+    depends_on:
+      - prometheus
+    networks:
+      - app-net
+
+
+
+  ###############################################################
+  # Grafana
+  ###############################################################
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+      
+  mlflow-exporter:
+    build:
+      context: .
+      dockerfile: monitoring/exporter.Dockerfile
+    container_name: mlflow_exporter
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5002
+    depends_on:
+      - mlflow
+    ports:
+      - "9009:9009"
+    networks:
+      - app-net
+
+
+
+###############################################################
+# VOLUMES
+###############################################################
+volumes:
+  marquez_db_data:
+  clickhouse_data:
+  mlflow:
+  
+networks:
+  app-net:
+    driver: bridge
+
+

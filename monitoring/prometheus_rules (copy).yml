@@ -1,0 +1,31 @@
+groups:
+  - name: pipeline_alerts
+    rules:
+
+      - alert: PipelineFailed
+        expr: pipeline_failure_total > 0
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pipeline failure detected"
+          description: "The orchestrate_pipeline.py has failed."
+
+      - alert: TrainingFailed
+        expr: training_failure_total > 0
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Training job failure"
+          description: "train_xgb_model.py failed."
+
+      - alert: DataDriftDetected
+        expr: drift_detected_total > 0
+        for: 5s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Data drift detected"
+          description: "Evidently reported drift in input data."
+

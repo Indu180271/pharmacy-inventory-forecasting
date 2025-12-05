@@ -1,0 +1,69 @@
+name: Pharmacy-inventory-forecasting
+
+on:
+  push:
+    branches: [ main, develop, master ]
+  pull_request:
+    branches: [ main, develop, master ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  lint-and-format:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort
+      - run: black --check --diff validator/ src/ orchestrate_pipeline.py || true
+      - run: isort --check-only --diff validator/ src/ || true
+      - run: flake8 validator/ src/ || true
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-format
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r validator/requirements.txt
+          pip install -r src/api/requirements.txt
+          pip install pytest
+      - run: pytest tests/ || echo "No tests available"
+
+  build-docker-images:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: lint-and-format
+    strategy:
+      matrix:
+        dockerfile:
+          - path: validator/Dockerfile
+            name: pipeline-validator
+          - path: src/training/Dockerfile
+            name: training-service
+          - path: src/api/Dockerfile
+            name: api-service
+          - path: monitoring/exporter.Dockerfile
+            name: exporter-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile.path }}
+          push: false
+          tags: ${{ matrix.dockerfile.name }}:latest

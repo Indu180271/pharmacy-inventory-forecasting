@@ -1,0 +1,13 @@
+name: transactions_checkpoint
+config_version: 1.0
+class_name: SimpleCheckpoint
+validations:
+  - batch_request:
+      datasource_name: local_csv
+      data_connector_name: default_runtime_data_connector_name
+      data_asset_name: inventory_transactions
+      runtime_parameters:
+        path: /home/aispry/gx_openlineage_pipeline/inventory_transactions_raw.csv
+      batch_identifiers:
+        - default_identifier_name
+    expectation_suite_name: transactions_suite

@@ -1,0 +1,21 @@
+project: inventory_fs
+
+registry:
+  type: clickhouse
+  path: feature_registry
+
+provider: local
+
+offline_store:
+  type: clickhouse
+  host: localhost
+  port: 8123
+  user: clickuser 
+  password: "clickpass" 
+  database: feature_zone
+
+online_store:
+  type: redis
+  connection_string: "localhost:6379"
+
+entity_key_serialization_version: 2

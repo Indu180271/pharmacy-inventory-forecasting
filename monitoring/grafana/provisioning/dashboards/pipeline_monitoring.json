@@ -1,0 +1,45 @@
+{
+  "title": "Pipeline Monitoring Dashboard",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Pipeline Success",
+      "targets": [{
+        "expr": "pipeline_success_total"
+      }],
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 }
+    },
+    {
+      "type": "stat",
+      "title": "Pipeline Failures",
+      "targets": [{
+        "expr": "pipeline_failure_total"
+      }],
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 }
+    },
+    {
+      "type": "graph",
+      "title": "Step Duration (seconds)",
+      "targets": [{
+        "expr": "histogram_quantile(0.90, sum(rate(pipeline_step_duration_seconds_bucket[5m])) by (le))"
+      }],
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 6 }
+    },
+    {
+      "type": "graph",
+      "title": "Rows Ingested",
+      "targets": [{
+        "expr": "rows_ingested_total"
+      }],
+      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 6 }
+    },
+    {
+      "type": "stat",
+      "title": "Validation Failures (GX)",
+      "targets": [{
+        "expr": "gx_validation_failed_total"
+      }],
+      "gridPos": { "x": 0, "y": 16, "w": 6, "h": 4 }
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "data_asset_type": null,
+  "expectation_suite_name": "sku_master",
+  "expectations": [
+
+    {
+      "expectation_type": "expect_table_columns_to_match_set",
+      "kwargs": {
+        "column_set": [
+          "sku_id",
+          "sku_code",
+          "sku_name",
+          "category",
+          "sub_category",
+          "therapeutic_area",
+          "brand_generic_flag",
+          "formulary_status",
+          "unit_of_measure",
+          "standard_cost",
+          "shelf_life_days",
+          "storage_requirements",
+          "controlled_substance_flag",
+          "halal_certified",
+          "base_drug_name",
+          "minimum_order_quantity",
+          "abc_classification",
+          "item_status",
+          "last_updated",
+          "current_reorder_level",
+          "ideal_forecasted_reorder_level",
+          "reorder_quantity",
+          "lead_time"
+        ],
+        "exact_match": true
+      }
+    },
+
+    { 
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "sku_id" }
+    },
+    { 
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "sku_name" }
+    },
+
+    {
+      "expectation_type": "expect_column_values_to_be_unique",
+      "kwargs": { "column": "sku_id" }
+    }
+
+  ],
+  "meta": {
+    "great_expectations_version": "1.0.0"
+  }
+}
+

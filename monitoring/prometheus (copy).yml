@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+
+  - job_name: 'pipeline'
+    static_configs:
+      - targets: ['pipeline:8000']
+
+  - job_name: 'train_xgb'
+    static_configs:
+      - targets: ['train-xgb:8000']
+
+  - job_name: 'clickhouse'
+    static_configs:
+      - targets: ['clickhouse:9363']   # ClickHouse exporter if added later
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['prometheus:9090']
+

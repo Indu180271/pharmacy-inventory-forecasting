@@ -1,0 +1,67 @@
+{
+  "data_asset_type": null,
+  "expectation_suite_name": "inventory_transactions",
+  "expectations": [
+
+    {
+      "expectation_type": "expect_table_columns_to_match_set",
+      "kwargs": {
+        "column_set": [
+          "transaction_id",
+          "transaction_code",
+          "hospital_id",
+          "dept_id",
+          "physician_id",
+          "patient_id",
+          "prescription_id",
+          "prescription_detail_id",
+          "bill_id",
+          "procedure_id",
+          "sku_id",
+          "transaction_time",
+          "quantity_consumed",
+          "unit_cogs",
+          "unit_price",
+          "margin_amount",
+          "margin_percentage",
+          "total_revenue",
+          "transaction_type",
+          "last_updated"
+        ],
+        "exact_match": true
+      }
+    },
+
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "transaction_id" }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "transaction_time" }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "sku_id" }
+    },
+
+    {
+      "expectation_type": "expect_column_values_to_be_unique",
+      "kwargs": { "column": "transaction_id" }
+    },
+
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "quantity_consumed",
+        "min_value": 0,
+        "max_value": null,
+        "mostly": 1.0
+      }
+    }
+
+  ],
+  "meta": {
+    "great_expectations_version": "1.0.0"
+  }
+}

@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# Data and Outputs
+data/
+validator/data/
+clean_output/
+validated_output/
+results/
+mpl/
+sample_batch_input.csv
+
+# Logs / Reports
+logs/
+eda_reports/
+validator/eda_reports/
+monitoring/evidently/reports/
+
+# Model & MLflow Artifacts
+models/
+mlflow/
+mlruns/
+
+# Great Expectations uncommitted
+gx/uncommitted/
+validator/gx/uncommitted/
+
+# DBT generated
+mlops_project/target/
+mlops_project/logs/
+
+# Docker volumes
+clickhouse_data/
+marquez_db_data/
+
+# DVC lock file (optional)
+dvc.lock
+
+# Environment files
+.env*
+src/frontend/inventory_transactions_samplecsv
